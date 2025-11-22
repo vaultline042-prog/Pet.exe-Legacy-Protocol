@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pet.exe – Legacy Protocol</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f1115;
+      color: #e6edf3;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 { color: #00e5ff; }
+    .panel {
+      background: #151a23;
+      border: 1px solid #233044;
+      border-radius: 12px;
+      padding: 16px;
+      margin: 12px 0;
+      width: 100%;
+      max-width: 720px;
+    }
+    #pet {
+      width: 160px;
+      height: 160px;
+      margin: 0 auto 16px;
+      background: url('pet-sprite.png') no-repeat center/contain;
+      border: 2px solid #233044;
+      border-radius: 12px;
+    }
+    .stats { display: flex; justify-content: space-around; margin-bottom: 12px; }
+    .stat { text-align: center; }
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    button {
+      background: #1f2532;
+      border: 1px solid #233044;
+      color: #e6edf3;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover { background: #2b3344; }
+    .log { max-height: 180px; overflow-y: auto; font-family: monospace; background: #0c1016; padding: 10px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>🐾 Pet.exe – Legacy Protocol</h1>
+
+  <!-- Pet Display -->
+  <div class="panel">
+    <div id="pet"></div>
+    <div class="stats">
+      <div class="stat">Health: <span id="health">100</span></div>
+      <div class="stat">XP: <span id="xp">0</span></div>
+      <div class="stat">Mood: <span id="mood">Happy</span></div>
+    </div>
+    <div class="controls">
+      <button onclick="callAction('feed')">Feed</button>
+      <button onclick="callAction('train')">Train</button>
+      <button onclick="callAction('play')">Play</button>
+      <button onclick="callAction('rest')">Rest</button>
+      <button onclick="callAction('reset')">Reset</button>
+    </div>
+  </div>
+
+  <!-- Legacy Log -->
+  <div class="panel">
+    <h2>Legacy Log</h2>
+    <div id="log" class="log"></div>
+  </div>
+
+  <script>
+    const API = "http://localhost:5000/api"; // 🔮 Backend hook
+
+    // Update stats from backend response
+    function updateState(state) {
+      document.getElementById("health").textContent = state.health;
+      document.getElementById("xp").textContent = state.xp;
+      document.getElementById("mood").textContent = state.mood;
+    }
+
+    // Render logs
+    function renderLogs(logs) {
+      const logDiv = document.getElementById("log");
+      logDiv.innerHTML = "";
+      logs.forEach(e => {
+        const line = document.createElement("div");
+        line.textContent = `[${e.timestamp}] ${e.action}: ${e.details}`;
+        logDiv.appendChild(line);
+      });
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    // Call backend action
+    function callAction(type) {
+      fetch(`${API}/${type}`, { method: "POST" })
+        .then(res => res.json())
+        .then(data => {
+          if (data.ok) {
+            updateState(data.state);
+            loadLogs();
+          }
+        })
+        .catch(() => console.warn("Backend not reachable"));
+    }
+
+    // Sync stats on load
+    function syncStats() {
+      fetch(`${API}/stats`)
+        .then(res => res.json())
+        .then(data => updateState(data.state));
+    }
+
+    // Load logs
+    function loadLogs() {
+      fetch(`${API}/logs?limit=50`)
+        .then(res => res.json())
+        .then(data => renderLogs(data.logs));
+    }
+
+    // Boot
+    syncStats();
+    loadLogs();
+  </script>
+</body>
+</html>
