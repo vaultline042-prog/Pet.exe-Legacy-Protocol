@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pet.exe – Legacy Protocol</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    /* ===== Theme & Tokens ===== */
+    :root {
+      --bg: #0f1115;
+      --panel: #151a23;
+      --panel-2: #0c1016;
+      --text: #e6edf3;
+      --muted: #9aa7b2;
+      --border: #233044;
+      --accent: #00e5ff;
+      --accent-2: #9d4edd;
+      --btn: #1f2532;
+      --btn-hover: #2b3344;
+      --danger: #a93a3a;
+
+      --health: #ff6b6b;
+      --xp: #5aa0ff;
+      --shadow: #8b5cf6;
+      --good: #7ee787;
+      --warn: #f2cc60;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      padding: 18px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ===== Header ===== */
+    header {
+      width: 100%;
+      max-width: 960px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .title {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .title h1 {
+      margin: 0;
+      font-size: 1.6rem;
+      color: var(--accent);
+      letter-spacing: 0.2px;
+    }
+    .subtitle {
+      margin: 0;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+    .theme-toggle {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    /* ===== Layout ===== */
+    main.container {
+      width: 100%;
+      max-width: 960px;
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 16px;
+    }
+    @media (max-width: 780px) {
+      main.container { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+      color: var(--accent-2);
+      letter-spacing: 0.2px;
+    }
+
+    /* ===== Pet Box ===== */
+    .pet-box {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 16px;
+      align-items: center;
+    }
+    @media (max-width: 480px) {
+      .pet-box { grid-template-columns: 1fr; }
+    }
+
+    #pet {
+      width: 160px;
+      height: 160px;
+      margin: 0;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: url('pet-sprite.png') no-repeat center/contain, var(--panel-2);
+      box-shadow: 0 6px 24px rgba(0,0,0,0.30);
+      transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease, background-image 200ms ease;
+    }
+    #pet.idle { transform: translateY(0); }
+    #pet.happy { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0,229,255,0.16); }
+    #pet.focused { transform: scale(1.02); }
+    #pet.joyful { transform: translateY(-3px) scale(1.03); }
+    #pet.shadowed { filter: drop-shadow(0 0 10px rgba(139,92,246,0.35)) saturate(0.85); }
+
+    /* ===== Stats ===== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 640px) {
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .stat-label {
+      font-size: 0.83rem;
+      color: var(--muted);
+    }
+    .stat-value {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .bar {
+      width: 100%;
+      height: 10px;
+      background: #0a0e13;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .bar > span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      transition: width 200ms ease;
+    }
+    .bar-health > span { background: var(--health); }
+    .bar-xp > span { background: var(--xp); }
+
+    .tier-badge {
+      display: inline-block;
+      width: max-content;
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* ===== Controls ===== */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--btn);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 140ms ease, transform 100ms ease, border-color 140ms ease;
+      font-weight: 600;
+    }
+    button:hover { background: var(--btn-hover); }
+    button:active { transform: translateY(1px); }
+    .danger { border-color: var(--danger); }
+    .ghost { background: transparent; }
+
+    /* ===== Log ===== */
+    .log {
+      max-height: 220px;
+      overflow: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.86rem;
+    }
+    .log-entry { color: #c9d1d9; margin-bottom: 6px; white-space: nowrap; }
+    .log-entry .t { color: #8b949e; }
+    .log-entry .a { color: #58a6ff; }
+    .log-entry .d { color: var(--good); }
+
+    /* ===== Settings ===== */
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 560px) {
+      .settings-grid { grid-template-columns: 1fr; }
+    }
+    .setting {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      gap: 12px;
+    }
+    .setting label { color: var(--muted); font-size: 0.9rem; }
+
+    /* ===== Footer ===== */
+    footer {
+      width: 100%;
+      max-width: 960px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">
+      <h1>🐾 Pet.exe – Legacy Protocol</h1>
+      <p class="subtitle">A mythic, evolving companion—persistent, symbolic, and responsive.</p>
+    </div>
+    <div class="theme-toggle">
+      <button id="toggleThemeBtn" title="Toggle theme">Toggle theme</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Pet + Stats -->
+    <section class="panel" aria-label="Pet and quick stats">
+      <div class="pet-box">
+        <div id="pet" class="idle" role="img" aria-label="Your pet"></div>
+        <div>
+          <div class="stats-grid">
+            <div class="stat">
+              <span class="stat-label">Health</span>
+              <span class="stat-value" id="healthText">100</span>
+              <div class="bar bar-health"><span id="healthBar"></span></div>
+            </div>
+            <div class="stat">
+              <span class="stat-label">XP</span>
+              <span class="stat-value" id="xpText">0</span>
+              <div class="bar bar-xp"><span id="xpBar"></span></div>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Mood</span>
+              <span class="stat-value" id="moodText">Happy</span>
+              <span class="tier-badge" id="tierBadge">Tier 1</span>
+            </div>
+          </div>
+
+          <div class="controls" role="group" aria-label="Pet controls">
+            <button id="feedBtn" title="Restore health (10)">Feed</button>
+            <button id="trainBtn" title="Gain XP (10)">Train</button>
+            <button id="playBtn" title="Gain XP (5) with a small health cost (5)">Play</button>
+            <button id="restBtn" class="ghost" title="Recover slowly (3)">Rest</button>
+            <button id="resetBtn" class="danger" title="Reset save and logs">Reset</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Legacy Log -->
+    <section class="panel" aria-label="Legacy log">
+      <h2>Legacy log</h2>
+      <div id="log" class="log" aria-live="polite" aria-relevant="additions"></div>
+    </section>
+
+    <!-- Settings -->
+    <section class="panel" aria-label="Settings">
+      <h2>Settings</h2>
+      <div class="settings-grid">
+        <div class="setting">
+          <label for="decayToggle">Inactivity decay</label>
+          <input id="decayToggle" type="checkbox" />
+        </div>
+        <div class="setting">
+          <label for="soundToggle">Sound effects (placeholder)</label>
+          <input id="soundToggle" type="checkbox" />
+        </div>
+        <div class="setting">
+          <label for="scaleRange">Pet size</label>
+          <input id="scaleRange" type="range" min="120" max="220" value="160" />
+        </div>
+        <div class="setting">
+          <label for="tierThresholds">Tier thresholds (50 / 100)</label>
+          <button id="tierThresholds">Reset thresholds</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Pet sprites required: pet-sprite.png (Tier 1), pet-tier2.png (Tier 2), pet-tier3.png (Tier 3), pet-shadow.png (Shadow).
+    Missing assets will fall back to Tier 1 automatically.
+  </footer>
+
+  <script>
+    // ===== Persistent State =====
+    const STORAGE_KEY = "petexe:v2";
+    const DEFAULTS = {
+      health: 100,
+      xp: 0,
+      mood: "Happy",
+      tier: 1,
+      lastActionAt: Date.now(),
+      logs: [],
+      settings: {
+        decayEnabled: true,
+        petSize: 160,
+        theme: "dark",
+        tier2: 50,
+        tier3: 100
+      }
+    };
+
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+    function safeParse(json, fallback) {
+      try {
+        const obj = JSON.parse(json);
+        if (!obj || typeof obj !== "object") return fallback;
+        obj.health = clamp(Number(obj.health ?? fallback.health), 0, 100);
+        obj.xp     = clamp(Number(obj.xp ?? fallback.xp), 0, 9999);
+        obj.mood   = String(obj.mood ?? fallback.mood);
+        obj.tier   = clamp(Number(obj.tier ?? fallback.tier), 1, 4);
+        obj.lastActionAt = Number(obj.lastActionAt ?? fallback.lastActionAt);
+        obj.logs = Array.isArray(obj.logs) ? obj.logs.slice(-100) : [];
+        obj.settings = { ...fallback.settings, ...(obj.settings || {}) };
+        obj.settings.petSize = clamp(Number(obj.settings.petSize), 120, 220);
+        obj.settings.tier2 = clamp(Number(obj.settings.tier2), 10, 200);
+        obj.settings.tier3 = clamp(Number(obj.settings.tier3), 20, 500);
+        obj.settings.theme = ["dark","light"].includes(obj.settings.theme) ? obj.settings.theme : "dark";
+        obj.settings.decayEnabled = Boolean(obj.settings.decayEnabled);
+        return obj;
+      } catch {
+        return fallback;
+      }
+    }
+
+    let state = safeParse(localStorage.getItem(STORAGE_KEY), structuredClone(DEFAULTS));
+
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    // ===== Elements =====
+    const el = {
+      pet: document.getElementById("pet"),
+      healthText: document.getElementById("healthText"),
+      xpText: document.getElementById("xpText"),
+      moodText: document.getElementById("moodText"),
+      tierBadge: document.getElementById("tierBadge"),
+      healthBar: document.getElementById("healthBar"),
+      xpBar: document.getElementById("xpBar"),
+      log: document.getElementById("log"),
+
+      feedBtn: document.getElementById("feedBtn"),
+      trainBtn: document.getElementById("trainBtn"),
+      playBtn: document.getElementById("playBtn"),
+      restBtn: document.getElementById("restBtn"),
+      resetBtn: document.getElementById("resetBtn"),
+
+      decayToggle: document.getElementById("decayToggle"),
+      soundToggle: document.getElementById("soundToggle"),
+      scaleRange: document.getElementById("scaleRange"),
+      tierReset: document.getElementById("tierThresholds"),
+      toggleThemeBtn: document.getElementById("toggleThemeBtn")
+    };
+
+    // ===== Sprites =====
+    const SPRITES = {
+      1: "pet-sprite.png",
+      2: "pet-tier2.png",
+      3: "pet-tier3.png",
+      4: "pet-shadow.png"
+    };
+
+    function preloadSprite(path, onOk, onErr) {
+      const img = new Image();
+      img.onload = onOk;
+      img.onerror = onErr;
+      img.src = path;
+    }
+
+    function applySprite(tier) {
+      const path = SPRITES[tier] || SPRITES[1];
+      preloadSprite(
+        path,
+        () => el.pet.style.backgroundImage = `url('${path}')`,
+        () => el.pet.style.backgroundImage = `url('${SPRITES[1]}')`
+      );
+    }
+
+    // ===== Evolution =====
+    function computeTier() {
+      if (state.health === 0) return 4;
+      if (state.xp >= state.settings.tier3) return 3;
+      if (state.xp >= state.settings.tier2) return 2;
+      return 1;
+    }
+
+    // ===== Logging =====
+    const timeStr = () => new Date().toLocaleString();
+    function log(action, details) {
+      const entry = { t: timeStr(), a: action, d: details };
+      state.logs.push(entry);
+      if (state.logs.length > 100) state.logs = state.logs.slice(-100);
+      const line = document.createElement("div");
+      line.className = "log-entry";
+      line.innerHTML = `<span class="t">[${entry.t}]</span> <span class="a">${entry.a}:</span> <span class="d">${entry.d}</span>`;
+      el.log.appendChild(line);
+      el.log.scrollTop = el.log.scrollHeight;
+      save();
+    }
+
+    function renderLogHistory() {
+      el.log.innerHTML = "";
+      for (const entry of state.logs) {
+        const line = document.createElement("div");
+        line.className = "log-entry";
+        line.innerHTML = `<span class="t">[${entry.t}]</span> <span class="a">${entry.a}:</span> <span class="d">${entry.d}</span>`;
+        el.log.appendChild(line);
+      }
+      el.log.scrollTop = el.log.scrollHeight;
+    }
+
+    // ===== Decay =====
+    let decayTimer = null;
+    function startDecay() {
+      clearInterval(decayTimer);
+      if (!state.settings.decayEnabled) return;
+      decayTimer = setInterval(() => {
+        const idleMs = Date.now() - state.lastActionAt;
+        if (idleMs > 5 * 60 * 1000) {
+          const prev = state.health;
+          state.health = clamp(state.health - 1, 0, 100);
+          if (state.health !== prev) {
+            state.mood = state.health === 0 ? "Shadowed" : "Lonely";
+            log("Decay", `Health -1 (inactive ${Math.floor(idleMs/60000)}m)`);
+            render();
+          }
+        }
+      }, 60 * 1000);
+    }
+
+    function touch() { state.lastActionAt = Date.now(); }
+
+    // ===== Actions =====
+    function feed() {
+      const prev = state.health;
+      state.health = clamp(state.health + 10, 0, 100);
+      state.mood = "Content";
+      touch(); log("Feed", `Health ${prev} → ${state.health}`);
+      render();
+    }
+    function train() {
+      const prev = state.xp;
+      state.xp = clamp(state.xp + 10, 0, 9999);
+      state.mood = "Focused";
+      touch(); log("Train", `XP ${prev} → ${state.xp}`);
+      render();
+    }
+    function play() {
+      const prevH = state.health, prevXP = state.xp;
+      state.xp = clamp(state.xp + 5, 0, 9999);
+      state.health = clamp(state.health - 5, 0, 100);
+      state.mood = state.health === 0 ? "Shadowed" : "Joyful";
+      touch(); log("Play", `XP ${prevXP} → ${state.xp}, Health ${prevH} → ${state.health}`);
+      render();
+    }
+    function rest() {
+      const prev = state.health;
+      state.health = clamp(state.health + 3, 0, 100);
+      state.mood = "Calm";
+      touch(); log("Rest", `Health ${prev} → ${state.health}`);
+      render();
+    }
+    function resetAll() {
+      state = structuredClone(DEFAULTS);
+      save();
+      renderLogHistory();
+      log("Reset", "State and logs cleared");
+      render();
+    }
+
+    // ===== Render =====
+    function render() {
+      state.health = clamp(state.health, 0, 100);
+      state.xp = clamp(state.xp, 0, 9999);
+
+      // Tier/evolution
+      const t = computeTier();
+      state.tier = t;
+      applySprite(t);
+
+      // Pet mood classes
+      el.pet.className = "idle";
+      if (state.mood === "Happy") el.pet.classList.add("happy");
+      else if (state.mood === "Content") el.pet.classList.add("happy");
+      else if (state.mood === "Focused") el.pet.classList.add("focused");
+      else if (state.mood === "Joyful") el.pet.classList.add("joyful");
+      else if (state.mood === "Shadowed" || t === 4) el.pet.classList.add("shadowed");
+
+      // Stats text
+      el.healthText.textContent = state.health;
+      el.xpText.textContent = state.xp;
+      el.moodText.textContent = state.mood;
+      el.tierBadge.textContent = t === 4 ? "Shadow" : `Tier ${t}`;
+
+      // Bars
+      el.healthBar.style.width = `${state.health}%`;
+      const xpProgress = clamp(state.xp % state.settings.tier3, 0, state.settings.tier3);
+      el.xpBar.style.width = `${(xpProgress / state.settings.tier3) * 100}%`;
+
+      // Settings sync
+      el.decayToggle.checked = Boolean(state.settings.decayEnabled);
+      el.scaleRange.value = state.settings.petSize;
+      el.pet.style.width = `${state.settings.petSize}px`;
+      el.pet.style.height = `${state.settings.petSize}px`;
+
+      // Theme apply
+      document.body.dataset.theme = state.settings.theme;
+      if (state.settings.theme === "light") {
+        document.documentElement.style.setProperty("--bg", "#f5f7fb");
+        document.documentElement.style.setProperty("--panel", "#ffffff");
+        document.documentElement.style.setProperty("--panel-2", "#f0f3f9");
+        document.documentElement.style.setProperty("--text", "#1b2430");
+        document.documentElement.style.setProperty("--muted", "#6b7785");
+        document.documentElement.style.setProperty("--border", "#d8dee9");
+        document.documentElement.style.setProperty("--btn", "#e9eef5");
+        document.documentElement.style.setProperty("--btn-hover", "#dde4ee");
+      } else {
+        // Reset to dark defaults
+        const vars = {
+          "--bg": "#0f1115", "--panel": "#151a23", "--panel-2": "#0c1016",
+          "--text": "#e6edf3", "--muted": "#9aa7b2", "--border": "#233044",
+          "--btn": "#1f2532", "--btn-hover": "#2b3344"
+        };
+        for (const [k,v] of Object.entries(vars)) {
+          document.documentElement.style.setProperty(k, v);
+        }
+      }
+
+      save();
+    }
+
+    // ===== Bindings =====
+    el.feedBtn.addEventListener("click", feed);
+    el.trainBtn.addEventListener("click", train);
+    el.playBtn.addEventListener("click", play);
+    el.restBtn.addEventListener("click", rest);
+    el.resetBtn.addEventListener("click", resetAll);
+
+    el.decayToggle.addEventListener("change", (e) => {
+      state.settings.decayEnabled = e.target.checked;
+      save();
+      startDecay();
+      log("Settings", `Decay ${state.settings.decayEnabled ? "enabled" : "disabled"}`);
+    });
+    el.scaleRange.addEventListener("input", (e) => {
+      state.settings.petSize = clamp(Number(e.target.value), 120, 220);
+      render();
+      log("Settings", `Pet size → ${state.settings.petSize}px`);
+    });
+    el.tierReset.addEventListener("click", () => {
+      state.settings.tier2 = DEFAULTS.settings.tier2;
+      state.settings.tier3 = DEFAULTS.settings.tier3;
+      save(); render();
+      log("Settings", "Tier thresholds reset to 50 / 100");
+    });
+    el.toggleThemeBtn.addEventListener("click", () => {
+      state.settings.theme = state.settings.theme === "dark" ? "light" : "dark";
+      render();
+      log("Theme", `Switched to ${state.settings.theme}`);
+    });
+
+    // ===== Boot =====
+    (function boot() {
+      renderLogHistory();
+      render();
+      startDecay();
+      log("Boot", "Frontend initialized");
+    })();
+  </script>
+</body>
+</html>
